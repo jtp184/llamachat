@@ -1,0 +1,78 @@
+<h1>Llamachat</h1>
+
+<div id="chat-box">
+  <div id="chat-messages">
+    <!-- Chat messages will appear here -->
+  </div>
+
+  <form id="chat-form">
+    <input type="text" id="chat-input" placeholder="Type your message...">
+    <button type="submit" id="chat-button">Send</button>
+  </form>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const ws = new WebSocket(`ws://${location.host}/socket`);
+    const chatMessages = document.getElementById('chat-messages');
+    const chatForm = document.getElementById('chat-form');
+    const chatInput = document.getElementById('chat-input');
+    const chatButton = document.getElementById('chat-button');
+
+    ws.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+      let messageElement = null;
+
+      console.log(message);
+
+      switch(message.status) {
+        case "start":
+          chatButton.setAttribute('disabled', '');
+
+          messageElement = document.createElement('div');
+          messageElement.className = 'message';
+          messageElement.id = message.uuid;
+          messageElement.innerHTML = '';
+          chatMessages.appendChild(messageElement);
+
+          break;
+        case "continue":
+          messageElement = document.getElementById(message.uuid);
+          messageElement.classList.add('fade-out');
+
+          setTimeout(() => {
+            messageElement.innerHTML = messageElement.innerHTML + message.token;
+            messageElement.classList.remove('fade-out');
+          }, 200);
+
+          break;
+        case "finish":
+          messageElement = document.getElementById(message.uuid);
+          messageElement.classList.add('complete');
+
+          chatButton.removeAttribute("disabled");
+          break;
+      }
+
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    };
+
+    chatForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+
+      const message = chatInput.value;
+
+      chatMessages.appendChild(document.createElement('br'));
+
+      let prompt = document.createElement('div');
+      prompt.className = 'message';
+      prompt.innerHTML = message;
+      chatMessages.appendChild(prompt);
+
+      ws.send(message);
+
+      chatInput.value = '';
+      chatInput.focus();
+    });
+  });
+</script>
